@@ -2,7 +2,11 @@
 pragma solidity ^0.8.10;
 
 contract MultiSigWallet {
+
+    //Emitted when Eth deposited into contract
     event Deposit(address indexed sender, uint256 amount, uint256 balance);
+
+    //Emitted when transaction submitted to contract, pending approval
     event SubmitTransaction(
         address indexed owner,
         uint256 indexed txIndex,
@@ -10,14 +14,26 @@ contract MultiSigWallet {
         uint256 value,
         bytes data
     );
+
+    //Emitted when an owner approves a Txn
     event ConfirmTransaction(address indexed owner, uint256 indexed txIndex);
+
+    //Emitted when an owner revokes their approval on a Txn
     event RevokeConfirmation(address indexed owner, uint256 indexed txIndex);
+
+    //Emitted when sufficient sigs gathered for a txn to be executed
     event ExecuteTransaction(address indexed owner, uint256 indexed txIndex);
 
+    
     address[] public owners;
+
+    //Mapping to check if a given address is an owner or not
     mapping(address => bool) public isOwner;
+
+    //To set how many sigs required for a successful txn. Will be passed as a parameter to constructor
     uint256 public numConfirmationsRequired;
 
+    // Struct for a txn. executed will be set to true when txn carried out.
     struct Transaction {
         address to;
         uint256 value;
@@ -26,16 +42,21 @@ contract MultiSigWallet {
         uint256 numConfirmations;
     }
 
-    // mapping from tx index => owner => bool
+    // To see which txns have been approved by which owner
+    //Index of 1st txn will be zero
+    //Thus, a query of isConfirmed[0] will tell us which owner has approved and which not
     mapping(uint256 => mapping(address => bool)) public isConfirmed;
 
     Transaction[] public transactions;
 
+
+    // To let only owners access
     modifier onlyOwner() {
         require(isOwner[msg.sender], "not owner");
         _;
     }
-
+    
+    //
     modifier txExists(uint256 _txIndex) {
         require(_txIndex < transactions.length, "tx does not exist");
         _;
@@ -54,26 +75,38 @@ contract MultiSigWallet {
 
      //constructor makes an array of owners, and sets the number of owners required to facilitate a transaction
     constructor(address[] memory _owners, uint256 _numConfirmationsRequired) {
+        
+        //self-explanatory require conditions
         require(_owners.length > 0, "owners required");
         require(_numConfirmationsRequired > 0 && _numConfirmationsRequired <= _owners.length,"invalid number of required confirmations");
+
+        
 
         for (uint256 i = 0; i < _owners.length; i++) {
             address owner = _owners[i];
 
+            //check for null address
             require(owner != address(0), "invalid owner");
+            //check for duplicate owner
             require(!isOwner[owner], "owner not unique");
 
+            //add to isOwner mapping (search mapping above)
             isOwner[owner] = true;
+
+            //push into array of owners.
             owners.push(owner);
         }
-
+        //Update state variable in the end.
         numConfirmationsRequired = _numConfirmationsRequired;
     }
 
+    // To receive Ether into contract
     receive() external payable {
+        
         emit Deposit(msg.sender, msg.value, address(this).balance);
     }
 
+    
     function submitTransaction(
         address _to,
         uint256 _value,
