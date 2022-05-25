@@ -56,17 +56,23 @@ contract MultiSigWallet {
         _;
     }
     
-    //
+    //to check if the txn actually exists
+    // If index> length, that means the txn array has not
+    //even reached that particular index
     modifier txExists(uint256 _txIndex) {
         require(_txIndex < transactions.length, "tx does not exist");
         _;
     }
 
+    //Checks bool value 'executed' from the array of structs
+    // if executed == false, then allow owner to approve
     modifier notExecuted(uint256 _txIndex) {
         require(!transactions[_txIndex].executed, "tx already executed");
         _;
     }
 
+    //Query mapping to check whether
+    //That specific txn has been approved by that specific owner    
     modifier notConfirmed(uint256 _txIndex) {
         require(!isConfirmed[_txIndex][msg.sender], "tx already confirmed");
         _;
@@ -106,7 +112,9 @@ contract MultiSigWallet {
         emit Deposit(msg.sender, msg.value, address(this).balance);
     }
 
-    
+    //To sequentially store txns
+    //initially, executed is set to false, 
+    //and num of confirms is 0
     function submitTransaction(
         address _to,
         uint256 _value,
@@ -126,7 +134,9 @@ contract MultiSigWallet {
 
         emit SubmitTransaction(msg.sender, txIndex, _to, _value, _data);
     }
-
+    
+    //Allows one of the owners to confirm a 
+    //specific txn
     function confirmTransaction(uint256 _txIndex)
         public
         onlyOwner
@@ -141,6 +151,38 @@ contract MultiSigWallet {
         emit ConfirmTransaction(msg.sender, _txIndex);
     }
 
+    //to revoke an existing confirmation
+    //After checking if a previous confirmation exists
+    //this fn will set the bool value of isConfirmed to false
+    function revokeConfirmation(uint256 _txIndex)
+        public
+        onlyOwner
+        txExists(_txIndex)
+        notExecuted(_txIndex)
+    {
+        Transaction storage transaction = transactions[_txIndex];
+
+        require(isConfirmed[_txIndex][msg.sender], "tx already not confirmed");
+
+        transaction.numConfirmations -= 1;
+        isConfirmed[_txIndex][msg.sender] = false;
+
+        emit RevokeConfirmation(msg.sender, _txIndex);
+    }
+
+    //returns the total number of approvals for a particular txn
+    function getApprovalCount(uint _txIndex) public view returns (uint _count) {
+
+        for(uint i=0; i<owners.length; i++)
+        {
+            if(isConfirmed[_txIndex][owners[i]])
+            _count+=1;
+        }
+        return _count;
+    }
+
+    //if all conditions for approval are met,
+    //this function will execute txn.
     function executeTransaction(uint256 _txIndex)
         public
         onlyOwner
@@ -164,30 +206,17 @@ contract MultiSigWallet {
         emit ExecuteTransaction(msg.sender, _txIndex);
     }
 
-    function revokeConfirmation(uint256 _txIndex)
-        public
-        onlyOwner
-        txExists(_txIndex)
-        notExecuted(_txIndex)
-    {
-        Transaction storage transaction = transactions[_txIndex];
-
-        require(isConfirmed[_txIndex][msg.sender], "tx not confirmed");
-
-        transaction.numConfirmations -= 1;
-        isConfirmed[_txIndex][msg.sender] = false;
-
-        emit RevokeConfirmation(msg.sender, _txIndex);
-    }
-
+    //returns the array of owners
     function getOwners() public view returns (address[] memory) {
         return owners;
     }
 
+    //returns the number of transactions submitted to the contract
     function getTransactionCount() public view returns (uint256) {
         return transactions.length;
     }
 
+    //Returns the details of a particular txn
     function getTransaction(uint256 _txIndex)
         public
         view

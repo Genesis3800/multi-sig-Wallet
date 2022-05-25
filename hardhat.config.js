@@ -16,6 +16,18 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
-module.exports = {
-  solidity: "0.8.10",
-};
+ require('dotenv').config()
+
+ module.exports = {
+   solidity: "0.8.10",
+   networks: {
+     mumbai: {
+       url: process.env.RPC_URL,
+       accounts: [process.env.PRI_KEY],
+     },
+   },
+   etherscan: {
+     apiKey: process.env.ETHERSCAN_API_KEY,
+   },
+ 
+ };
