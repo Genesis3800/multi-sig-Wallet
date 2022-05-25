@@ -2,5 +2,7 @@
 
 
 ```
-This is a project made to show my understanding of solidity and core blockchain concepts. This is a multi-sig wallet.
+This is a project made to show my understanding of solidity and core blockchain concepts.
+
+Documentation of Multi-sig Wallet Contract Functions and State Variables-
 
