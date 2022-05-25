@@ -51,6 +51,8 @@ contract MultiSigWallet {
         _;
     }
 
+
+     //constructor makes an array of owners, and sets the number of owners required to facilitate a transaction
     constructor(address[] memory _owners, uint256 _numConfirmationsRequired) {
         require(_owners.length > 0, "owners required");
         require(_numConfirmationsRequired > 0 && _numConfirmationsRequired <= _owners.length,"invalid number of required confirmations");
